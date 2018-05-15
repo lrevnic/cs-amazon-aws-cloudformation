@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.cloudslang.content</groupId>
+    <artifactId>cs-amazon-aws-cloudformation-cp</artifactId>
+    <version>0.0.2</version>
+    <packaging>jar</packaging>
+
+    <name>Amazon AWS CloudFormation (CloudSlang)</name>
+    <description>Amazon AWS CloudFormation Content Pack</description>
+    <url>https://www.microfocus.com</url>
+
+    <properties>
+        <score-content-sdk.version>1.10.6</score-content-sdk.version>
+        <cs-amazon.version>1.0.15</cs-amazon.version>
+        <java8>C:\jenkins\tools\hudson.model.JDK\zulu1.8.0_45-win</java8>
+        <sign.tool.path>C:\SignHP\SignHP\SignHPClient.jar</sign.tool.path>
+        <!-- Maven properties -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
+        <maven.sources.skip>true</maven.sources.skip>
+    </properties>
+
+    <scm>
+        <connection>scm:git:git@github.houston.softwaregrp.net:oo-cs-rnd/cs-amazon-aws.git</connection>
+        <developerConnection>scm:git:git@github.houston.softwaregrp.net:oo-cs-rnd/cs-amazon-aws.git
+        </developerConnection>
+        <url>https://github.houston.softwaregrp.net/oo-cs-rnd/cs-amazon-aws</url>
+        <tag>master</tag>
+    </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>nexus-repository</id>
+            <name>nexus repository</name>
+            <url>http://mydph0022.hpeswlab.net:8081/nexus/content/repositories/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus-snapshot-repository</id>
+            <name>nexus snapshots repository</name>
+            <url>http://mydph0022.hpeswlab.net:8081/nexus/content/repositories/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.cloudslang.content</groupId>
+            <artifactId>cs-amazon</artifactId>
+            <version>${cs-amazon.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hp.score.sdk</groupId>
+            <artifactId>score-content-sdk</artifactId>
+            <version>${score-content-sdk.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.0.1</version>
+                    <configuration>
+                        <skipSource>true</skipSource>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.7.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-release-plugin</artifactId>
+                    <version>2.5.3</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.0.2</version>
+                    <executions>
+                        <execution>
+                            <id>copy jarsigner test certificate</id>
+                            <!-- This property is defined in content packs -->
+                            <phase>process-sources</phase>
+                            <goals>
+                                <goal>copy</goal>
+                            </goals>
+                            <configuration>
+                                <artifactItems>
+                                    <artifactItem>
+                                        <groupId>internal</groupId>
+                                        <artifactId>signhp-jarsigner</artifactId>
+                                        <version>1.0.0</version>
+                                        <type>pfx</type>
+                                    </artifactItem>
+                                </artifactItems>
+                                <outputDirectory>${project.build.directory}/jarsigner</outputDirectory>
+                                <stripVersion>true</stripVersion>
+                                <overWriteReleases>false</overWriteReleases>
+                                <overWriteSnapshots>true</overWriteSnapshots>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>1.7</version>
+                    <executions>
+                        <execution>
+                            <id>sign-content-pack</id>
+                            <!-- This property is defined in content packs -->
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target name="code-sign" unless="dont.sign">
+                                    <property environment="env"/>
+                                    <echo>Signing Content Pack</echo>
+                                    <echo>${project.build.directory}/${project.artifactId}-${project.version}.jar</echo>
+                                    <taskdef resource="net/sf/antcontrib/antcontrib.properties"
+                                             classpathref="maven.plugin.classpath"/>
+                                    <if>
+                                        <and>
+                                            <available
+                                                    file="${project.build.directory}/${project.artifactId}-${project.version}.jar"/>
+                                        </and>
+                                        <then>
+                                            <if>
+                                                <isset property="remoteSign"/>
+                                                <then>
+                                                    <property name="signed.files.path" value="signed_files"/>
+                                                    <exec executable="cmd" failonerror="true">
+                                                        <arg value="/c"/>
+                                                        <arg value="java"/>
+                                                        <arg value="-jar"/>
+                                                        <arg value="${sign.tool.path}"/>
+                                                        <arg value="sign"/>
+                                                        <arg value="-p"/>
+                                                        <arg value="OO-Jar-Signtool"/>
+                                                        <arg value="-i"/>
+                                                        <arg value="${project.build.directory}/${project.artifactId}-${project.version}.jar"/>
+                                                        <arg value="-o"/>
+                                                        <arg value="${signed.files.path}"/>
+                                                        <env key="JAVA_HOME" value="${java8}"/>
+                                                        <env key="PATH" path="${java8}/bin; ${env.PATH}"/>
+                                                    </exec>
+                                                    <echo message="replacing ${project.artifactId}-${project.version}.jar"/>
+                                                    <echo message="with the signed version from"/>
+                                                    <echo message="${signed.files.path}/${project.artifactId}-${project.version}.jar"/>
+                                                    <move file="${signed.files.path}/${project.artifactId}-${project.version}.jar"
+                                                          tofile="${project.build.directory}/${project.artifactId}-${project.version}.jar"
+                                                          overwrite="true" verbose="true"/>
+                                                </then>
+                                                <else>
+                                                    <echo message="Running local signing with test certificate"/>
+                                                    <exec executable="cmd">
+                                                        <arg value="/c"/>
+                                                        <arg value="jarsigner"/>
+                                                        <arg value="-keystore"/>
+                                                        <arg value="${project.build.directory}/jarsigner/signhp-jarsigner.pfx"/>
+                                                        <arg value="-keypass"/>
+                                                        <arg value="cr92HvHrU8B8fHe4ssd0GkXjrEBwDL"/>
+                                                        <arg value="-storepass"/>
+                                                        <arg value="cr92HvHrU8B8fHe4ssd0GkXjrEBwDL"/>
+                                                        <arg value="-storetype"/>
+                                                        <arg value="PKCS12"/>
+                                                        <arg value="${project.build.directory}/${project.artifactId}-${project.version}.jar"/>
+                                                        <arg value="1"/>
+                                                    </exec>
+                                                </else>
+                                            </if>
+                                        </then>
+                                    </if>
+                                </target>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <dependencies>
+                        <dependency>
+                            <groupId>ant-contrib</groupId>
+                            <artifactId>ant-contrib</artifactId>
+                            <version>1.0b3</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>ant</groupId>
+                                    <artifactId>ant</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.ant</groupId>
+                            <artifactId>ant-nodeps</artifactId>
+                            <version>1.8.1</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <!-- Checkout the remote repo into the target folder-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-scm-plugin</artifactId>
+                <version>1.9.5</version>
+                <executions>
+                    <execution>
+                        <id>download-cloudslang-content</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>checkout</goal>
+                        </goals>
+                        <configuration>
+                            <connectionUrl>scm:git:git@github.com:CloudSlang/cs-content.git</connectionUrl>
+                            <checkoutDirectory>${project.build.directory}/cs-content</checkoutDirectory>
+                            <scmVersion>master</scmVersion>
+                            <scmVersionType>branch</scmVersionType>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>copy-cloudslang-content</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>
+                                ${project.build.outputDirectory}/Content/Library/io/cloudslang/amazon/aws/cloudformation/
+                            </outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>
+                                        ${project.build.directory}/cs-content/content/io/cloudslang/amazon/aws/cloudformation/
+                                    </directory>
+                                    <filtering>false</filtering>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-project-resources</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/src/main/resources</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <addParentPoms>true</addParentPoms>
+                            <copyPom>true</copyPom>
+                            <useRepositoryLayout>true</useRepositoryLayout>
+                            <excludeTransitive>false</excludeTransitive>
+                            <includeScope>compile</includeScope>
+                            <outputDirectory>${project.build.outputDirectory}/Lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.cloudslang.tools</groupId>
+                <artifactId>cs-content-packager-plugin</artifactId>
+                <version>1.0.0</version>
+                <executions>
+                    <execution>
+                        <id>copy content properties</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>package</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.7</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
