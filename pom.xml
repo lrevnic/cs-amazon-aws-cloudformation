@@ -6,7 +6,7 @@
 
     <groupId>io.cloudslang.content</groupId>
     <artifactId>cs-amazon-aws-cloudformation-cp</artifactId>
-    <version>0.0.2</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Amazon AWS CloudFormation (CloudSlang)</name>

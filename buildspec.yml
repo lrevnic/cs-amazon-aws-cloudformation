@@ -11,4 +11,4 @@ phases:
       - mvn package
 artifacts:
   files:
-    - target/cs-amazon-aws-cloudformation-cp-1.0-SNAPSHOT.jar
+    - target/cs-amazon-aws-cloudformation-cp-1.0.0-SNAPSHOT.jar
